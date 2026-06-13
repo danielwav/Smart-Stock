@@ -25,14 +25,16 @@ function LoginContent() {
   // Control de errores y estados de carga
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Detectar callback de Google OAuth
   useEffect(() => {
     const googleUser = searchParams.get("google_user");
     if (googleUser) {
+      setGoogleLoading(true);
       loginWithGoogle(googleUser, "", "").then((res) => {
-        if (res.success) router.push("/location");
-      });
+        if (res.success) window.location.href = "/location";
+      }).finally(() => setGoogleLoading(false));
     }
     const errorParam = searchParams.get("error");
     if (errorParam) {
@@ -138,7 +140,7 @@ function LoginContent() {
     }
   };
 
-  if (loading) {
+  if (loading || googleLoading) {
     return (
       <div className="flex flex-1 items-center justify-center min-h-screen bg-neutral-bg">
         <div className="w-10 h-10 rounded-full border-4 border-brand-purple border-t-transparent animate-spin" />
