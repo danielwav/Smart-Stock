@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "migrate": "npx prisma db push",
+    "migrate": "npx prisma migrate deploy",
     "lint": "eslint",
     "postinstall": "npx prisma generate"
   },
