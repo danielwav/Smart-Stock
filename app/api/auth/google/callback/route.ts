@@ -6,21 +6,25 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const error = searchParams.get("error");
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+  if (!baseUrl && process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "NEXT_PUBLIC_BASE_URL is not configured" }, { status: 500 });
+  }
+  const safeBaseUrl = baseUrl || "http://localhost:3000";
 
   if (error || !code) {
     console.error("Google OAuth error:", error);
-    return NextResponse.redirect(new URL("/login?error=google_auth_failed", baseUrl));
+    return NextResponse.redirect(new URL("/login?error=google_auth_failed", safeBaseUrl));
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL("/login?error=google_not_configured", baseUrl));
+    return NextResponse.redirect(new URL("/login?error=google_not_configured", safeBaseUrl));
   }
 
-  const redirectUri = `${baseUrl}/api/auth/google/callback`;
+  const redirectUri = `${safeBaseUrl}/api/auth/google/callback`;
 
   try {
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errText = await tokenResponse.text();
       console.error("Token exchange failed:", errText);
-      return NextResponse.redirect(new URL("/login?error=token_exchange_failed", baseUrl));
+      return NextResponse.redirect(new URL("/login?error=token_exchange_failed", safeBaseUrl));
     }
 
     const tokenData = await tokenResponse.json();
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!userInfoResponse.ok) {
-      return NextResponse.redirect(new URL("/login?error=userinfo_failed", baseUrl));
+      return NextResponse.redirect(new URL("/login?error=userinfo_failed", safeBaseUrl));
     }
 
     const userInfo = await userInfoResponse.json();
@@ -62,14 +66,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (result.success && result.user) {
-      const redirectUrl = new URL("/login", baseUrl);
+      const redirectUrl = new URL("/login", safeBaseUrl);
       redirectUrl.searchParams.set("google_user", result.user.email);
       return NextResponse.redirect(redirectUrl);
     }
 
-    return NextResponse.redirect(new URL("/login?error=login_failed", baseUrl));
+    return NextResponse.redirect(new URL("/login?error=login_failed", safeBaseUrl));
   } catch (err) {
     console.error("Google OAuth callback error:", err);
-    return NextResponse.redirect(new URL("/login?error=server_error", baseUrl));
+    return NextResponse.redirect(new URL("/login?error=server_error", safeBaseUrl));
   }
 }

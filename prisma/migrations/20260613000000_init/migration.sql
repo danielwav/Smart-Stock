@@ -11,7 +11,7 @@ CREATE TABLE `User` (
     `location` VARCHAR(191) NULL,
     `lat` DOUBLE NULL,
     `lng` DOUBLE NULL,
-    `avatarUrl` VARCHAR(191) NULL,
+    `avatarUrl` TEXT NULL,
     `purchaseStreak` INTEGER NOT NULL DEFAULT 80,
     `isVerified` BOOLEAN NOT NULL DEFAULT true,
     `resetToken` VARCHAR(191) NULL,

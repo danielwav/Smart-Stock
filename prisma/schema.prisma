@@ -21,7 +21,7 @@ model User {
   location         String?
   lat              Float?
   lng              Float?
-  avatarUrl        String?
+  avatarUrl        String?     @db.Text
   purchaseStreak   Int        @default(80)
   isVerified       Boolean    @default(true)
   resetToken       String?    @unique

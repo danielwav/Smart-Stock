@@ -156,8 +156,13 @@ export async function forgotPasswordAction(email: string) {
       data: { resetToken, resetTokenExpiry },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000");
+    if (!baseUrl && process.env.NODE_ENV === "production") {
+      console.error("NEXT_PUBLIC_BASE_URL is not configured — skipping password reset email");
+      return { success: false, error: "Configuración de URL base no disponible." };
+    }
+    const safeBaseUrl = baseUrl || "http://localhost:3000";
+    const resetLink = `${safeBaseUrl}/reset-password?token=${resetToken}`;
 
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
