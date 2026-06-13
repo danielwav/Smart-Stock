@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "./db";
+import crypto from "crypto";
 
 // 1. Autenticación y Perfil de Usuario
 export async function getSessionUser(email: string) {
@@ -147,7 +148,6 @@ export async function forgotPasswordAction(email: string) {
       return { success: false, error: "No existe una cuenta con ese correo electrónico." };
     }
 
-    const crypto = require("crypto");
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hora
 
@@ -271,11 +271,15 @@ export async function fetchNearbyTambosAction(lat: number, lng: number, radius: 
       out body;
     `;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const response = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ data: overpassQuery }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       console.warn("Overpass API responded with status:", response.status);
