@@ -326,7 +326,7 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => addToCart(item.product.id as any)}
+                          onClick={() => addToCart(item.product)}
                           className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
