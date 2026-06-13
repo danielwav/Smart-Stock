@@ -1,9 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === 'production') {
+function createPrismaClient(): PrismaClient {
   const url = new URL(process.env.DATABASE_URL!);
   const adapter = new PrismaMariaDb({
     host: url.hostname,
@@ -11,24 +9,26 @@ if (process.env.NODE_ENV === 'production') {
     user: url.username,
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ''),
-    connectionLimit: 10,
+    connectionLimit: process.env.NODE_ENV === 'production' ? 10 : 5,
   });
-  prisma = new PrismaClient({ adapter });
-} else {
-  // Prevent multiple instances of Prisma Client in development
-  if (!(global as any).globalPrisma) {
-    const url = new URL(process.env.DATABASE_URL!);
-    const adapter = new PrismaMariaDb({
-      host: url.hostname,
-      port: parseInt(url.port || '3306', 10),
-      user: url.username,
-      password: decodeURIComponent(url.password),
-      database: url.pathname.replace(/^\//, ''),
-      connectionLimit: 5,
-    });
-    (global as any).globalPrisma = new PrismaClient({ adapter });
-  }
-  prisma = (global as any).globalPrisma;
+  return new PrismaClient({ adapter });
 }
 
-export { prisma };
+let prismaClient: PrismaClient | null = null;
+
+function getClient(): PrismaClient {
+  if (!prismaClient) {
+    prismaClient = createPrismaClient();
+  }
+  return prismaClient;
+}
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    return getClient()[prop as keyof PrismaClient];
+  },
+  set(_, prop, value) {
+    (getClient() as any)[prop] = value;
+    return true;
+  },
+});
