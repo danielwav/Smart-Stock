@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "../../context/UserContext";
-import { useCart } from "../../context/CartContext";
+import { useCart, type CartItem } from "../../context/CartContext";
 import { getProductsAction, createOrderAction, updateOrderStatusAction } from "../../lib/actions";
 import { Product as DBProduct } from "@prisma/client";
 import {
@@ -301,135 +301,95 @@ export default function CartPage() {
 
               {/* Lista de productos */}
               <div className="flex flex-col gap-4">
+                {cartItems.filter((i) => !i.comboGroup).map((item) => (
+                  <div
+                    key={item.product.id}
+                    className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm"
+                  >
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                      <ImagePlaceholder
+                        filename={`${item.product.imageKey}.jpg`}
+                        description={item.product.name}
+                        type="product"
+                        className="w-full h-full"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <span className="text-[8px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-0.5 rounded-md">
+                        {item.product.category}
+                      </span>
+                      <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">
+                        {item.product.name}
+                      </h3>
+                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">
+                        {item.product.unit}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-6 shrink-0">
+                      <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
+                        <button
+                          onClick={() => removeFromCart(item.product.id)}
+                          className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs font-black px-3.5 text-brand-purple-dark">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => addToCart(item.product)}
+                          className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
+                        S/ {(item.product.price * item.quantity).toFixed(2)}
+                      </span>
+                      <button
+                        onClick={() => deleteFromCart(item.product.id)}
+                        className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
+                        title="Eliminar del carrito"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
                 {(() => {
-                  const groups = new Map<number | string, typeof cartItems>();
-                  const standalone: typeof cartItems = [];
+                  const groups = new Map<number, CartItem[]>();
                   for (const item of cartItems) {
                     if (item.comboGroup) {
-                      const key = `combo-${item.comboGroup}`;
-                      if (!groups.has(key)) groups.set(key, []);
-                      groups.get(key)!.push(item);
-                    } else {
-                      standalone.push(item);
+                      if (!groups.has(item.comboGroup)) groups.set(item.comboGroup, []);
+                      groups.get(item.comboGroup)!.push(item);
                     }
                   }
-                  const comboEntries = Array.from(groups.entries());
-
-                  return [...standalone, ...comboEntries].flatMap((entry, idx) => {
-                    if (Array.isArray(entry)) {
-                      const groupItems = entry as typeof cartItems;
-                      const groupId = groupItems[0]?.comboGroup;
-                      return [
-                        <div key={`combo-header-${groupId}`} className="flex items-center justify-between pl-1 mt-2">
-                          <span className="text-[10px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-1 rounded-md">Combo</span>
-                          <button
-                            onClick={() => removeComboGroup(groupId!)}
-                            className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer"
-                          >
-                            Quitar combo
-                          </button>
-                        </div>,
-                        ...groupItems.map((item) => (
-                          <div
-                            key={`combo-${groupId}-${item.product.id}`}
-                            className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm"
-                          >
-                            <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
-                              <ImagePlaceholder
-                                filename={`${item.product.imageKey}.jpg`}
-                                description={item.product.name}
-                                type="product"
-                                className="w-full h-full"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0 text-center sm:text-left">
-                              <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">{item.product.name}</h3>
-                              <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">{item.product.unit}</p>
-                            </div>
-                            <div className="flex items-center gap-6 shrink-0">
-                              <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
-                                <button onClick={() => removeItemFromCombo(item.product.id, groupId!)}
-                                  className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer">
-                                  <Minus className="w-3.5 h-3.5" />
-                                </button>
-                                <span className="text-xs font-black px-3.5 text-brand-purple-dark">{item.quantity}</span>
-                                <button onClick={() => addItemToCombo(item.product, groupId!)}
-                                  className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer">
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                              <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
-                                S/ {(item.product.price * item.quantity).toFixed(2)}
-                              </span>
-                              <button
-                                onClick={() => removeItemFromCombo(item.product.id, groupId!)}
-                                className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
-                                title="Quitar del combo"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        )),
-                      ];
-                    }
-                    const item = entry as typeof cartItems[0];
-                    return (
-                      <div
-                        key={item.product.id}
-                        className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm"
-                      >
+                  return Array.from(groups.entries()).flatMap(([groupId, groupItems]) => [
+                    <div key={`ch-${groupId}`} className="flex items-center justify-between pl-1 mt-2">
+                      <span className="text-[10px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-1 rounded-md">Combo</span>
+                      <button onClick={() => removeComboGroup(groupId)} className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer">Quitar combo</button>
+                    </div>,
+                    ...groupItems.map((item) => (
+                      <div key={`cg-${groupId}-${item.product.id}`} className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
                         <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
-                          <ImagePlaceholder
-                            filename={`${item.product.imageKey}.jpg`}
-                            description={item.product.name}
-                            type="product"
-                            className="w-full h-full"
-                          />
+                          <ImagePlaceholder filename={`${item.product.imageKey}.jpg`} description={item.product.name} type="product" className="w-full h-full" />
                         </div>
                         <div className="flex-1 min-w-0 text-center sm:text-left">
-                          <span className="text-[8px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-0.5 rounded-md">
-                            {item.product.category}
-                          </span>
-                          <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">
-                            {item.product.name}
-                          </h3>
-                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">
-                            {item.product.unit}
-                          </p>
+                          <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">{item.product.name}</h3>
+                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">{item.product.unit}</p>
                         </div>
                         <div className="flex items-center gap-6 shrink-0">
                           <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
-                            <button
-                              onClick={() => removeFromCart(item.product.id)}
-                              className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-xs font-black px-3.5 text-brand-purple-dark">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => addToCart(item.product)}
-                              className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
+                            <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
+                            <span className="text-xs font-black px-3.5 text-brand-purple-dark">{item.quantity}</span>
+                            <button onClick={() => addItemToCombo(item.product, groupId)} className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
                           </div>
-                          <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
-                            S/ {(item.product.price * item.quantity).toFixed(2)}
-                          </span>
-                          <button
-                            onClick={() => deleteFromCart(item.product.id)}
-                            className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
-                            title="Eliminar del carrito"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">S/ {(item.product.price * item.quantity).toFixed(2)}</span>
+                          <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer" title="Quitar del combo"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-                    );
-                  });
+                    )),
+                  ]);
                 })()}
               </div>
             </div>

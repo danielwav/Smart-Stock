@@ -206,12 +206,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("smart_stock_free_beverage");
   };
 
-  const allItems: CartItem[] = freeBeverage && freeProductProgress >= 100
-    ? [...cartItems, freeBeverage]
-    : cartItems;
-
-  const cartCount = allItems.reduce((acc, item) => acc + item.quantity, 0);
-
   const cartSubtotal = parseFloat(
     cartItems
       .filter((item) => !item.isFree)
@@ -219,15 +213,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .toFixed(2)
   );
 
-  const cartTotal = freeBeverage && freeProductProgress >= 100
-    ? cartSubtotal
-    : cartSubtotal;
-
   const amountNeededForFreeProduct = parseFloat(
     Math.max(0, freeProductThreshold - cartSubtotal).toFixed(2)
   );
   const freeProductProgress = Math.min(100, Math.round((cartSubtotal / freeProductThreshold) * 100));
   const freeProductUnlocked = freeProductProgress >= 100;
+
+  const allItems: CartItem[] = freeBeverage && freeProductUnlocked
+    ? [...cartItems, freeBeverage]
+    : cartItems;
+
+  const cartCount = allItems.reduce((acc, item) => acc + item.quantity, 0);
+  const cartTotal = cartSubtotal;
 
   return (
     <CartContext.Provider
