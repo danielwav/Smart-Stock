@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartStock 🛒
 
-## Getting Started
+Aplicación web de comercio electrónico para bodegas de barrio (Tambo+) con recojo en tienda, autenticación con Google, recuperación de contraseña y edición de avatar.
 
-First, run the development server:
+## Stack
+
+- **Framework**: Next.js 16.2.9 (App Router + Turbopack)
+- **Lenguaje**: TypeScript
+- **Base de datos**: MySQL vía Prisma 7.8.0
+- **Estilos**: Tailwind CSS v4 + Lucide icons
+- **Email**: Resend
+- **Mapa**: Leaflet + OpenStreetMap + Overpass API (Tambo reales)
+
+## Requisitos
+
+- Node.js 20+
+- MySQL 8+ corriendo localmente o en Railway
+- npm
+
+## Instalación local
 
 ```bash
+# 1. Clonar el repositorio
+git clone https://github.com/danielwav/Smart-Stock.git
+cd Smart-Stock
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus credenciales (ver sección variables)
+
+# 4. Sincronizar esquema de BD
+npx prisma db push
+
+# 5. (Opcional) Poblar BD con datos de demo
+node prisma/seed.js
+
+# 6. Iniciar servidor de desarrollo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables de entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Crear un archivo `.env` en la raíz del proyecto:
 
-## Learn More
+| Variable | Descripción |
+|---|---|
+| `DATABASE_URL` | URL de conexión MySQL (`mysql://user:pass@host:3306/db`) |
+| `GOOGLE_CLIENT_ID` | Client ID de Google OAuth |
+| `GOOGLE_CLIENT_SECRET` | Client Secret de Google OAuth |
+| `NEXT_PUBLIC_BASE_URL` | URL base de la app (`http://localhost:3000` en local) |
+| `RESEND_API_KEY` | API key de Resend para envío de correos |
+| `RESEND_FROM_EMAIL` | Remitente de correos (`onboarding@resend.dev` por defecto) |
 
-To learn more about Next.js, take a look at the following resources:
+### Google OAuth
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Ir a [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Crear proyecto → "Credentials" → "OAuth 2.0 Client ID" (tipo **Web application**)
+3. **Authorized redirect URIs**: `http://localhost:3000/api/auth/google/callback`
+4. **Authorized JavaScript origins**: `http://localhost:3000`
+5. Copiar Client ID y Client Secret al `.env`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Resend (recuperación de contraseña)
 
-## Deploy on Vercel
+1. Registrarse en [resend.com](https://resend.com)
+2. Ir a "API Keys" y crear una nueva
+3. Copiar la API key al `.env` como `RESEND_API_KEY`
+4. El remitente `onboarding@resend.dev` funciona sin verificar dominio
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Despliegue en Railway
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new)
+
+### Pasos
+
+1. Conectar el repositorio de GitHub
+2. Agregar **MySQL** como add-on (Railway provee la URL automáticamente)
+3. Configurar las variables de entorno en Railway Dashboard:
+
+   | Variable | Cómo obtenerla |
+   |---|---|
+   | `DATABASE_URL` | La genera Railway automáticamente al agregar MySQL |
+   | `GOOGLE_CLIENT_ID` | Google Cloud Console |
+   | `GOOGLE_CLIENT_SECRET` | Google Cloud Console |
+   | `NEXT_PUBLIC_BASE_URL` | `https://{tu-app}.railway.app` |
+   | `RESEND_API_KEY` | Resend Dashboard |
+
+4. Agregar Redirect URI en Google Cloud:
+   - `https://{tu-app}.railway.app/api/auth/google/callback`
+5. Railway ejecuta automáticamente:
+   - `npx prisma generate` (postinstall)
+   - `npm run build`
+   - `npx prisma db push && next start` (start)
+
+### Datos de demo
+
+Para poblar la BD con productos y un usuario de prueba:
+
+```bash
+railway run node prisma/seed.js
+```
+
+Usuario demo: `alex.rivera@example.com` / `demo123`
+
+## Rutas
+
+| Ruta | Descripción |
+|---|---|
+| `/` | Landing page |
+| `/login` | Login / Registro con Google OAuth |
+| `/store` | Tienda con categorías (Bebidas, Promos, Combos) |
+| `/cart` | Carrito de compras y pago |
+| `/location` | Selección de ubicación y Tambos cercanos |
+| `/profile` | Perfil y Mis Pedidos |
+| `/forgot-password` | Recuperación de contraseña |
+| `/reset-password` | Restablecer contraseña |
+
+## Funcionalidades
+
+- **Google OAuth real**: Inicio de sesión con cuenta de Google
+- **Recuperación de contraseña**: Envío de correo vía Resend
+- **Tambos dinámicos**: Búsqueda de tiendas reales vía Overpass API según la zona del mapa
+- **Avatar personalizado**: Editor con recorte, rotación y volteo (estilo Discord)
+- **Recojo en tienda**: Estados Pendiente → Preparando → Listo → Recogido
+- **Historial de pedidos**: Seguimiento desde el perfil del usuario
+- **Stock en tiempo real**: Productos con stock limitado y badge "Últimas existencias"
