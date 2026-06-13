@@ -3,8 +3,8 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "../../context/UserContext";
-import { useCart } from "../../context/CartContext";
-import { getProductsAction } from "../../lib/actions";
+import { useCart, type Product as CartProduct } from "../../context/CartContext";
+import { getProductsAction, getComboProductsAction } from "../../lib/actions";
 import { Product as DBProduct } from "@prisma/client";
 import {
   Beer,
@@ -42,7 +42,7 @@ function StoreContent() {
   const filterParam = searchParams.get("filter");
 
   const { user, location, loading: userLoading } = useUser();
-  const { addToCart, searchQuery } = useCart();
+  const { addToCart, addComboToCart, searchQuery } = useCart();
 
   const [products, setProducts] = useState<DBProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -88,6 +88,22 @@ function StoreContent() {
     }
     loadProducts();
   }, []);
+
+  const handleAddCombo = async (combo: DBProduct) => {
+    try {
+      const res = await getComboProductsAction(combo.id);
+      if (res.success && res.items.length > 0) {
+        addComboToCart(combo.id, res.items.map((i: any) => ({
+          product: i.product as CartProduct,
+          quantity: i.quantity,
+        })));
+      } else {
+        addToCart(combo as any);
+      }
+    } catch {
+      addToCart(combo as any);
+    }
+  };
 
   const categories: CategoryItem[] = [
     { id: "Bebidas", name: "Bebidas", color: "bg-yellow-400 hover:bg-yellow-500", textColor: "text-yellow-800", icon: <GlassWater className="w-5 h-5" /> },
@@ -497,7 +513,7 @@ function StoreContent() {
                         </div>
                         {prod.stock > 0 ? (
                           <button
-                            onClick={() => addToCart(prod as any)}
+                            onClick={() => handleAddCombo(prod)}
                             className="bg-brand-yellow hover:bg-brand-yellow-hover text-brand-purple-dark text-xs font-black px-5 py-3 rounded-2xl shadow-md shadow-yellow-100 transition-all cursor-pointer hover:scale-105"
                           >
                             Agregar

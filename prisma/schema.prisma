@@ -32,19 +32,32 @@ model User {
 }
 
 model Product {
-  id             Int         @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   name           String
   category       String
   subCategory    String?
-  stock          Int         @default(20)
+  stock          Int            @default(20)
   price          Float
   unit           String
-  description    String?     @db.VarChar(500)
-  isRecommended  Boolean     @default(false)
-  isBestSeller   Boolean     @default(false)
+  description    String?        @db.VarChar(500)
+  isRecommended  Boolean        @default(false)
+  isBestSeller   Boolean        @default(false)
   imageKey       String
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime       @default(now())
   orderItems     OrderItem[]
+  comboItems     ComboProduct[] @relation("ComboItems")
+  comboParents   ComboProduct[] @relation("ComboParents")
+}
+
+model ComboProduct {
+  id        Int     @id @default(autoincrement())
+  comboId   Int
+  productId Int
+  quantity  Int     @default(1)
+  combo     Product @relation("ComboItems", fields: [comboId], references: [id])
+  product   Product @relation("ComboParents", fields: [productId], references: [id])
+
+  @@unique([comboId, productId])
 }
 
 model Store {

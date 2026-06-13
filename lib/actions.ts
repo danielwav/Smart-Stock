@@ -385,7 +385,16 @@ export async function createOrderAction(
   items: Array<{ productId: number; quantity: number; price: number }>
 ) {
   try {
-    // Descontar stock de cada producto
+    for (const item of items) {
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product) {
+        return { success: false, error: `Producto ID ${item.productId} no encontrado.` };
+      }
+      if (product.stock < item.quantity) {
+        return { success: false, error: `Stock insuficiente para "${product.name}". Disponible: ${product.stock}, solicitado: ${item.quantity}.` };
+      }
+    }
+
     for (const item of items) {
       await prisma.product.update({
         where: { id: item.productId },
@@ -423,6 +432,22 @@ export async function createOrderAction(
   } catch (error: any) {
     console.error("Error al crear orden:", error);
     return { success: false, error: error.message };
+  }
+}
+
+export async function getComboProductsAction(comboId: number) {
+  try {
+    const items = await prisma.comboProduct.findMany({
+      where: { comboId },
+      include: { product: true },
+    });
+    return {
+      success: true,
+      items: items.map((i) => ({ product: i.product, quantity: i.quantity })),
+    };
+  } catch (error: any) {
+    console.error("Error al obtener productos del combo:", error);
+    return { success: false, items: [], error: error.message };
   }
 }
 

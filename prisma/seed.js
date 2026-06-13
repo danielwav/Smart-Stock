@@ -121,6 +121,51 @@ async function main() {
   }
   console.log(`${products.length} productos creados.`);
 
+  const seedProds = await prisma.product.findMany();
+
+  const getProd = (key) => seedProds.find(p => p.imageKey === key);
+
+  const combosToAdd = [
+    { comboKey: 'combo_futbolero', items: [
+      { key: 'pilsen_callao_355ml', qty: 6 },
+      { key: 'lays_clasicas_70g', qty: 1 },
+      { key: 'inka_chips_sal', qty: 1 },
+    ]},
+    { comboKey: 'combo_relax', items: [
+      { key: 'inca_kola_1_5l', qty: 2 },
+      { key: 'san_mateo_600ml', qty: 1 },
+      { key: 'snack_cuisine', qty: 1 },
+    ]},
+    { comboKey: 'combo_fiesta', items: [
+      { key: 'four_loko_purple', qty: 2 },
+      { key: 'piqueos_cuisine', qty: 1 },
+      { key: 'inka_chips_sal', qty: 1 },
+    ]},
+    { comboKey: 'combo_dulce', items: [
+      { key: 'sublime_tableton', qty: 1 },
+      { key: 'galleta_casino_menta_pack', qty: 1 },
+      { key: 'yogurt_gloria_frutado', qty: 1 },
+    ]},
+    { comboKey: 'combo_refrescante', items: [
+      { key: 'inca_kola_1_5l', qty: 1 },
+      { key: 'sprite_1_5l', qty: 1 },
+      { key: 'cielo_2l', qty: 1 },
+    ]},
+  ];
+
+  for (const combo of combosToAdd) {
+    const comboProd = getProd(combo.comboKey);
+    if (!comboProd) { console.warn('Combo no encontrado:', combo.comboKey); continue; }
+    for (const item of combo.items) {
+      const prod = getProd(item.key);
+      if (!prod) { console.warn('Producto no encontrado:', item.key); continue; }
+      await prisma.comboProduct.create({
+        data: { comboId: comboProd.id, productId: prod.id, quantity: item.qty },
+      });
+    }
+  }
+  console.log('Relaciones de combo creadas.');
+
   const demoUser = await prisma.user.create({
     data: {
       name: 'Alex',

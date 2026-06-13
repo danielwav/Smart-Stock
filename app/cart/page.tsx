@@ -33,7 +33,15 @@ export default function CartPage() {
     cartTotal,
     amountNeededForFreeProduct,
     freeProductProgress,
+    freeProductUnlocked,
     addToCart,
+    addComboToCart,
+    addItemToCombo,
+    removeItemFromCombo,
+    removeComboGroup,
+    addFreeBeverage,
+    removeFreeBeverage,
+    freeBeverage,
     removeFromCart,
     deleteFromCart,
     clearCart,
@@ -172,12 +180,20 @@ export default function CartPage() {
       try {
         if (!user) return;
         
-        // Registrar orden en la base de datos MySQL
-        const itemsToSave = cartItems.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          price: item.product.price,
-        }));
+        const orderItems = cartItems.filter((i) => !i.isFree);
+        const freeItems = cartItems.filter((i) => i.isFree);
+        const itemsToSave = [
+          ...orderItems.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+            price: item.product.price,
+          })),
+          ...freeItems.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+            price: 0,
+          })),
+        ];
         
         const storeName = selectedStore?.name || "Recojo en tienda";
         const res = await createOrderAction(
@@ -285,70 +301,136 @@ export default function CartPage() {
 
               {/* Lista de productos */}
               <div className="flex flex-col gap-4">
-                {cartItems.map((item) => (
-                  <div
-                    key={item.product.id}
-                    className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm"
-                  >
-                    {/* Imagen Placeholder */}
-                    <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
-                      <ImagePlaceholder
-                        filename={`${item.product.imageKey}.jpg`}
-                        description={item.product.name}
-                        type="product"
-                        className="w-full h-full"
-                      />
-                    </div>
+                {(() => {
+                  const groups = new Map<number | string, typeof cartItems>();
+                  const standalone: typeof cartItems = [];
+                  for (const item of cartItems) {
+                    if (item.comboGroup) {
+                      const key = `combo-${item.comboGroup}`;
+                      if (!groups.has(key)) groups.set(key, []);
+                      groups.get(key)!.push(item);
+                    } else {
+                      standalone.push(item);
+                    }
+                  }
+                  const comboEntries = Array.from(groups.entries());
 
-                    {/* Detalles */}
-                    <div className="flex-1 min-w-0 text-center sm:text-left">
-                      <span className="text-[8px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-0.5 rounded-md">
-                        {item.product.category}
-                      </span>
-                      <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">
-                        {item.product.name}
-                      </h3>
-                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">
-                        {item.product.unit}
-                      </p>
-                    </div>
-
-                    {/* Selector de cantidad y precio (Imagen 4) */}
-                    <div className="flex items-center gap-6 shrink-0">
-                      <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-xs font-black px-3.5 text-brand-purple-dark">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => addToCart(item.product)}
-                          className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Subtotal por ítem */}
-                      <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
-                        S/ {(item.product.price * item.quantity).toFixed(2)}
-                      </span>
-
-                      {/* Botón borrar */}
-                      <button
-                        onClick={() => deleteFromCart(item.product.id)}
-                        className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
-                        title="Eliminar del carrito"
+                  return [...standalone, ...comboEntries].flatMap((entry, idx) => {
+                    if (Array.isArray(entry)) {
+                      const groupItems = entry as typeof cartItems;
+                      const groupId = groupItems[0]?.comboGroup;
+                      return [
+                        <div key={`combo-header-${groupId}`} className="flex items-center justify-between pl-1 mt-2">
+                          <span className="text-[10px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-1 rounded-md">Combo</span>
+                          <button
+                            onClick={() => removeComboGroup(groupId!)}
+                            className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer"
+                          >
+                            Quitar combo
+                          </button>
+                        </div>,
+                        ...groupItems.map((item) => (
+                          <div
+                            key={`combo-${groupId}-${item.product.id}`}
+                            className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm"
+                          >
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                              <ImagePlaceholder
+                                filename={`${item.product.imageKey}.jpg`}
+                                description={item.product.name}
+                                type="product"
+                                className="w-full h-full"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0 text-center sm:text-left">
+                              <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">{item.product.name}</h3>
+                              <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">{item.product.unit}</p>
+                            </div>
+                            <div className="flex items-center gap-6 shrink-0">
+                              <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
+                                <button onClick={() => removeItemFromCombo(item.product.id, groupId!)}
+                                  className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer">
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="text-xs font-black px-3.5 text-brand-purple-dark">{item.quantity}</span>
+                                <button onClick={() => addItemToCombo(item.product, groupId!)}
+                                  className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
+                                S/ {(item.product.price * item.quantity).toFixed(2)}
+                              </span>
+                              <button
+                                onClick={() => removeItemFromCombo(item.product.id, groupId!)}
+                                className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
+                                title="Quitar del combo"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )),
+                      ];
+                    }
+                    const item = entry as typeof cartItems[0];
+                    return (
+                      <div
+                        key={item.product.id}
+                        className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                          <ImagePlaceholder
+                            filename={`${item.product.imageKey}.jpg`}
+                            description={item.product.name}
+                            type="product"
+                            className="w-full h-full"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 text-center sm:text-left">
+                          <span className="text-[8px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-0.5 rounded-md">
+                            {item.product.category}
+                          </span>
+                          <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">
+                            {item.product.name}
+                          </h3>
+                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">
+                            {item.product.unit}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-6 shrink-0">
+                          <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
+                            <button
+                              onClick={() => removeFromCart(item.product.id)}
+                              className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-xs font-black px-3.5 text-brand-purple-dark">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => addToCart(item.product)}
+                              className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
+                            S/ {(item.product.price * item.quantity).toFixed(2)}
+                          </span>
+                          <button
+                            onClick={() => deleteFromCart(item.product.id)}
+                            className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
+                            title="Eliminar del carrito"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
 
@@ -371,9 +453,9 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Barra incentivo para bebida gratis (Imagen 4) */}
+                {/* Barra incentivo para bebida gratis */}
                 <div className="my-6 bg-purple-50/50 p-4 rounded-2xl border border-purple-100/50">
-                  {amountNeededForFreeProduct > 0 ? (
+                  {!freeProductUnlocked ? (
                     <>
                       <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 mb-1 leading-none">
                         <span>¡CASI LLEGAS A UN PRODUCTO GRATIS!</span>
@@ -388,11 +470,40 @@ export default function CartPage() {
                         />
                       </div>
                     </>
+                  ) : freeBeverage ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-wider">
+                          🎁 Bebida gratis
+                        </span>
+                        <span className="text-xs font-bold text-brand-purple-dark">{freeBeverage.product.name}</span>
+                      </div>
+                      <button
+                        onClick={removeFreeBeverage}
+                        className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer"
+                      >
+                        Quitar
+                      </button>
+                    </div>
                   ) : (
                     <div className="text-center">
                       <span className="text-[10px] font-black text-brand-purple bg-brand-purple-light px-3 py-1 rounded-full uppercase tracking-wider">
                         🎁 ¡Desbloqueaste tu bebida gratis!
                       </span>
+                      <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                        {products
+                          .filter((p) => p.subCategory === "Agua" || p.subCategory === "Gaseosa" || p.subCategory === "Jugo")
+                          .slice(0, 4)
+                          .map((drink) => (
+                            <button
+                              key={drink.id}
+                              onClick={() => addFreeBeverage(drink as any)}
+                              className="text-[9px] font-bold bg-white border border-purple-100 hover:border-brand-purple px-3 py-2 rounded-xl transition-all cursor-pointer"
+                            >
+                              {drink.name}
+                            </button>
+                          ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -416,7 +527,7 @@ export default function CartPage() {
           </div>
         )}
 
-        {/* Más para tu combo (Imagen 4 inferior) */}
+        {/* Más para tu combo */}
         {!showCheckout && upsellProducts.length > 0 && (
           <div className="w-full mt-4">
             <div className="flex items-center justify-between mb-5 px-1">
@@ -428,44 +539,53 @@ export default function CartPage() {
                   Complementa tu orden
                 </p>
               </div>
-              <button className="text-xs font-bold text-brand-purple hover:underline cursor-pointer">
-                Ver todo
-              </button>
             </div>
 
-            {/* Grid de productos cruzados */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {upsellProducts.map((prod) => (
-                <div
-                  key={prod.id}
-                  className="bg-white border border-purple-100/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-                >
-                  <div className="w-full aspect-square rounded-xl overflow-hidden mb-3">
-                    <ImagePlaceholder
-                      filename={`${prod.imageKey}.jpg`}
-                      description={prod.name}
-                      type="product"
-                      className="w-full h-full"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-bold text-brand-purple-dark text-xs truncate group-hover:text-brand-purple transition-colors">
-                        {prod.name}
-                      </h4>
-                      <span className="font-black text-brand-purple-dark text-xs mt-1.5 block">
-                        S/ {prod.price.toFixed(2)}
-                      </span>
+              {upsellProducts.map((prod) => {
+                const activeComboGroup = cartItems.find((i) => i.comboGroup)?.comboGroup;
+                return (
+                  <div
+                    key={prod.id}
+                    className="bg-white border border-purple-100/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                  >
+                    <div className="w-full aspect-square rounded-xl overflow-hidden mb-3">
+                      <ImagePlaceholder
+                        filename={`${prod.imageKey}.jpg`}
+                        description={prod.name}
+                        type="product"
+                        className="w-full h-full"
+                      />
                     </div>
-                    <button
-                      onClick={() => addToCart(prod as any)}
-                      className="mt-3 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-purple-dark p-2 rounded-xl shadow-sm cursor-pointer self-end transform hover:scale-105 transition-transform"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-bold text-brand-purple-dark text-xs truncate group-hover:text-brand-purple transition-colors">
+                          {prod.name}
+                        </h4>
+                        <span className="font-black text-brand-purple-dark text-xs mt-1.5 block">
+                          S/ {prod.price.toFixed(2)}
+                        </span>
+                      </div>
+                      {activeComboGroup ? (
+                        <button
+                          onClick={() => addItemToCombo(prod as any, activeComboGroup)}
+                          className="mt-3 text-[9px] font-bold bg-purple-50 hover:bg-purple-100 text-brand-purple px-2 py-2 rounded-xl cursor-pointer self-start transition-colors"
+                          title="Agregar al combo"
+                        >
+                          + Al combo
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(prod as any)}
+                          className="mt-3 bg-brand-yellow hover:bg-brand-yellow-hover text-brand-purple-dark p-2 rounded-xl shadow-sm cursor-pointer self-end transform hover:scale-105 transition-transform"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
