@@ -8,9 +8,6 @@
         "install": {
           "cmds": ["npm ci"]
         },
-        "setup": {
-          "cmds": ["npx prisma generate"]
-        },
         "build": {
           "cmds": ["npm run build"]
         }
