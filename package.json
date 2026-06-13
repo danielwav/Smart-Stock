@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npx prisma db push && next start",
+    "start": "next start",
+    "migrate": "npx prisma db push",
     "lint": "eslint",
-    "railway": "npx prisma db push && npm run build && next start",
     "postinstall": "npx prisma generate"
   },
   "dependencies": {
