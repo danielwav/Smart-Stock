@@ -336,49 +336,53 @@ export default function CartPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0 text-center sm:text-left">
-                      <span className="text-[8px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-0.5 rounded-md">
-                        {item.product.category}
-                      </span>
+                      {!item.isFree && (
+                        <span className="text-[9px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-0.5 rounded-md">
+                          {item.product.category}
+                        </span>
+                      )}
                       <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">
                         {item.product.name}
                       </h3>
-                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">
+                      <p className="text-xs text-gray-500 font-semibold mt-0.5 truncate">
                         {item.product.unit}
                       </p>
                     </div>
-                    <div className="flex items-center gap-6 shrink-0">
-                      <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-xs font-black px-3.5 text-brand-purple-dark">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => addToCart(item.product)}
-                          className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
+                    {item.isFree ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-bold text-green-600 text-sm min-w-[70px] text-right">Gratis</span>
                       </div>
-                      {item.isFree ? (
-                        <span className="font-bold text-green-600 text-xs min-w-[70px] text-right">Gratis</span>
-                      ) : (
+                    ) : (
+                      <div className="flex items-center gap-6 shrink-0">
+                        <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
+                          <button
+                            onClick={() => removeFromCart(item.product.id)}
+                            className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-sm font-black px-3.5 text-brand-purple-dark">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => addToCart(item.product)}
+                            className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                         <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
                           S/ {(item.product.price * item.quantity).toFixed(2)}
                         </span>
-                      )}
-                      <button
-                        onClick={() => deleteFromCart(item.product.id)}
-                        className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
-                        title="Eliminar del carrito"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => deleteFromCart(item.product.id)}
+                          className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
+                          title="Eliminar del carrito"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {(() => {
@@ -405,7 +409,7 @@ export default function CartPage() {
                             </div>
                             <div className="min-w-0 text-left">
                               <span className="font-black text-brand-purple-dark text-sm block truncate">{comboName}</span>
-                              <span className="text-[9px] text-gray-400 font-semibold">{groupItems.length} {groupItems.length === 1 ? "producto" : "productos"}</span>
+                              <span className="text-xs text-gray-500 font-semibold">{groupItems.length} {groupItems.length === 1 ? "producto" : "productos"}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -422,23 +426,23 @@ export default function CartPage() {
                                     <ImagePlaceholder filename={`${item.product.imageKey}.jpg`} description={item.product.name} type="product" className="w-full h-full" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-brand-purple-dark text-xs truncate">{item.product.name}</h4>
-                                    <p className="text-[9px] text-gray-400 font-medium truncate">{item.product.unit}</p>
+                                    <h4 className="font-bold text-brand-purple-dark text-sm truncate">{item.product.name}</h4>
+                                    <p className="text-xs text-gray-500 font-medium truncate">{item.product.unit}</p>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
                                     <div className="flex items-center bg-purple-50/50 rounded-lg border border-purple-100/50 p-0.5">
                                       <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1 hover:bg-purple-100 rounded-md text-brand-purple transition-all cursor-pointer"><Minus className="w-3 h-3" /></button>
-                                      <span className="text-[10px] font-black px-2 text-brand-purple-dark">{item.quantity}</span>
+                                      <span className="text-sm font-black px-2.5 text-brand-purple-dark">{item.quantity}</span>
                                       <button onClick={() => addItemToCombo(item.product, groupId)} className="p-1 hover:bg-purple-100 rounded-md text-brand-purple transition-all cursor-pointer"><Plus className="w-3 h-3" /></button>
                                     </div>
-                                    <span className="font-bold text-brand-purple-dark text-[10px] min-w-[50px] text-right">S/ {(item.product.price * item.quantity).toFixed(2)}</span>
-                                    <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-400 hover:text-red-600 transition-all cursor-pointer" title="Quitar del combo"><Trash2 className="w-3 h-3" /></button>
+                                    <span className="font-bold text-brand-purple-dark text-sm min-w-[55px] text-right">S/ {(item.product.price * item.quantity).toFixed(2)}</span>
+                                    <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-500 hover:text-red-700 transition-all cursor-pointer" title="Quitar del combo"><Trash2 className="w-3 h-3" /></button>
                                   </div>
                                 </div>
                               ))}
                             </div>
                             <div className="border-t border-purple-100/50 px-4 py-2 flex justify-end gap-3">
-                              <button onClick={() => removeComboGroup(groupId)} className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer transition-colors">Quitar combo</button>
+                              <button onClick={() => removeComboGroup(groupId)} className="text-xs font-bold text-red-500 hover:text-red-700 cursor-pointer transition-colors">Quitar combo</button>
                             </div>
                           </div>
                         )}
@@ -458,11 +462,11 @@ export default function CartPage() {
                 
                 {/* Costos */}
                 <div className="space-y-3 pb-6 border-b border-purple-50">
-                  <div className="flex justify-between items-center text-xs text-gray-500 font-semibold">
+                  <div className="flex justify-between items-center text-sm text-gray-600 font-semibold">
                     <span>Subtotal</span>
                     <span>S/ {cartSubtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm font-black text-brand-purple-dark pt-1">
+                  <div className="flex justify-between items-center text-base font-black text-brand-purple-dark pt-1">
                     <span>Total</span>
                     <span className="text-xl text-brand-purple">S/ {cartTotal.toFixed(2)}</span>
                   </div>
@@ -472,7 +476,7 @@ export default function CartPage() {
                 <div className="my-6 bg-purple-50/50 p-4 rounded-2xl border border-purple-100/50">
                   {!freeProductUnlocked ? (
                     <>
-                      <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 mb-1 leading-none">
+                      <div className="flex justify-between items-center text-xs font-bold text-gray-600 mb-1">
                         <span>¡CASI LLEGAS A UN PRODUCTO GRATIS!</span>
                         <span className="text-brand-purple font-black">
                           S/ {amountNeededForFreeProduct.toFixed(2)} faltan
@@ -488,21 +492,21 @@ export default function CartPage() {
                   ) : freeBeverage ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-wider">
+                        <span className="text-xs font-black text-green-700 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
                           🎁 Bebida gratis
                         </span>
-                        <span className="text-xs font-bold text-brand-purple-dark">{freeBeverage.product.name}</span>
+                        <span className="text-sm font-bold text-brand-purple-dark">{freeBeverage.product.name}</span>
                       </div>
                       <button
                         onClick={removeFreeBeverage}
-                        className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer"
+                        className="text-xs font-bold text-red-500 hover:text-red-700 cursor-pointer"
                       >
                         Quitar
                       </button>
                     </div>
                   ) : (
                     <div className="text-center">
-                      <span className="text-[10px] font-black text-brand-purple bg-brand-purple-light px-3 py-1 rounded-full uppercase tracking-wider">
+                      <span className="text-xs font-black text-brand-purple bg-brand-purple-light px-3 py-1.5 rounded-full uppercase tracking-wider">
                         🎁 ¡Desbloqueaste tu bebida gratis!
                       </span>
                       <div className="mt-3 flex flex-wrap gap-2 justify-center">
@@ -513,7 +517,7 @@ export default function CartPage() {
                             <button
                               key={drink.id}
                               onClick={() => addFreeBeverage(drink as any)}
-                              className="text-[9px] font-bold bg-white border border-purple-100 hover:border-brand-purple px-3 py-2 rounded-xl transition-all cursor-pointer"
+                              className="text-xs font-bold bg-white border border-purple-100 hover:border-brand-purple px-3 py-2.5 rounded-xl transition-all cursor-pointer"
                             >
                               {drink.name}
                             </button>
@@ -547,10 +551,10 @@ export default function CartPage() {
           <div className="w-full mt-4">
             <div className="flex items-center justify-between mb-5 px-1">
               <div>
-                <h2 className="text-sm font-black text-brand-purple-dark uppercase tracking-wider">
+                <h2 className="text-base font-black text-brand-purple-dark uppercase tracking-wider">
                   Más para tu combo
                 </h2>
-                <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                <p className="text-xs text-gray-500 font-semibold mt-0.5">
                   Complementa tu orden
                 </p>
               </div>
@@ -580,17 +584,17 @@ export default function CartPage() {
                     </div>
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <h4 className="font-bold text-brand-purple-dark text-xs truncate group-hover:text-brand-purple transition-colors">
+                        <h4 className="font-bold text-brand-purple-dark text-sm truncate group-hover:text-brand-purple transition-colors">
                           {prod.name}
                         </h4>
-                        <span className="font-black text-brand-purple-dark text-xs mt-1.5 block">
+                        <span className="font-black text-brand-purple-dark text-sm mt-1.5 block">
                           S/ {prod.price.toFixed(2)}
                         </span>
                       </div>
                       {activeComboGroups.length > 0 ? (
                         <button
                           onClick={handleAddToCombo}
-                          className="mt-3 text-[9px] font-bold bg-purple-50 hover:bg-purple-100 text-brand-purple px-2 py-2 rounded-xl cursor-pointer self-start transition-colors"
+                          className="mt-3 text-xs font-bold bg-purple-50 hover:bg-purple-100 text-brand-purple px-3 py-2.5 rounded-xl cursor-pointer self-start transition-colors"
                           title="Agregar al combo"
                         >
                           + Al combo
