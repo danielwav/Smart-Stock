@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { googleLoginAction } from "../../../../../lib/actions";
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get("code");
-  const error = searchParams.get("error");
+  const url = new URL(request.url);
+  console.log("Callback full URL:", request.url);
+  const code = url.searchParams.get("code");
+  const error = url.searchParams.get("error");
+  const state = url.searchParams.get("state");
+  console.log("Callback params:", JSON.stringify({ code: code ? "present" : "missing", error, state }));
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
   if (!baseUrl && process.env.NODE_ENV === "production") {
