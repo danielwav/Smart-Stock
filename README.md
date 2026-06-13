@@ -1,4 +1,4 @@
-# SmartStock 🛒
+# SmartStock 
 
 Aplicación web de comercio electrónico para bodegas de barrio (Tambo+) con recojo en tienda, autenticación con Google, recuperación de contraseña y edición de avatar.
 
