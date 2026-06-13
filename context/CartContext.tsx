@@ -23,6 +23,10 @@ export interface CartItem {
   isFree: boolean;
 }
 
+export interface ComboGroupMeta {
+  name: string;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
@@ -32,10 +36,11 @@ interface CartContextType {
   amountNeededForFreeProduct: number;
   freeProductProgress: number;
   freeProductUnlocked: boolean;
+  comboGroups: Record<number, ComboGroupMeta>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   addToCart: (product: Product, qty?: number) => void;
-  addComboToCart: (comboId: number, products: Array<{ product: Product; quantity: number }>) => void;
+  addComboToCart: (comboId: number, products: Array<{ product: Product; quantity: number }>, comboName: string) => void;
   removeComboGroup: (comboGroup: number) => void;
   removeItemFromCombo: (productId: number, comboGroup: number) => void;
   addItemToCombo: (product: Product, comboGroup: number) => void;
@@ -56,6 +61,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [freeBeverage, setFreeBeverage] = useState<CartItem | null>(null);
+  const [comboGroups, setComboGroups] = useState<Record<number, ComboGroupMeta>>({});
 
   const freeProductThreshold = 50.0;
 
@@ -75,7 +81,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setFreeBeverage(JSON.parse(savedFree));
       } catch (e) {}
     }
+    const savedGroups = localStorage.getItem("smart_stock_combo_groups");
+    if (savedGroups) {
+      try {
+        setComboGroups(JSON.parse(savedGroups));
+      } catch (e) {}
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("smart_stock_combo_groups", JSON.stringify(comboGroups));
+  }, [comboGroups]);
 
   const saveCart = (items: CartItem[]) => {
     setCartItems(items);
@@ -95,8 +111,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addComboToCart = (comboId: number, products: Array<{ product: Product; quantity: number }>) => {
+  const addComboToCart = (comboId: number, products: Array<{ product: Product; quantity: number }>, comboName: string) => {
     const group = nextComboGroup++;
+    setComboGroups(prev => ({ ...prev, [group]: { name: comboName } }));
     const newItems: CartItem[] = products.map((p) => ({
       product: p.product,
       quantity: p.quantity,
@@ -108,6 +125,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeComboGroup = (comboGroup: number) => {
     const newItems = cartItems.filter((item) => item.comboGroup !== comboGroup);
+    setComboGroups(prev => {
+      const next = { ...prev };
+      delete next[comboGroup];
+      return next;
+    });
     saveCart(newItems);
   };
 
@@ -203,6 +225,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearCart = () => {
     saveCart([]);
     setFreeBeverage(null);
+    setComboGroups({});
     localStorage.removeItem("smart_stock_free_beverage");
   };
 
@@ -237,6 +260,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         amountNeededForFreeProduct,
         freeProductProgress,
         freeProductUnlocked,
+        comboGroups,
         searchQuery,
         setSearchQuery,
         addToCart,

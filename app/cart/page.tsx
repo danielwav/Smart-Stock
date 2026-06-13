@@ -18,6 +18,8 @@ import {
   CheckCircle,
   Store,
   AlertCircle,
+  ChevronDown,
+  Zap,
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
@@ -34,6 +36,7 @@ export default function CartPage() {
     amountNeededForFreeProduct,
     freeProductProgress,
     freeProductUnlocked,
+    comboGroups,
     addToCart,
     addComboToCart,
     addItemToCombo,
@@ -64,6 +67,24 @@ export default function CartPage() {
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
   const [pickupStep, setPickupStep] = useState(0); // 0: Pendiente, 1: Preparando, 2: Listo para recoger, 3: Recogido
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+
+  const [expandedCombos, setExpandedCombos] = useState<Set<number>>(new Set());
+  const [comboSelectorProduct, setComboSelectorProduct] = useState<{ product: any; activeGroups: Array<{ group: number; name: string }> } | null>(null);
+
+  const toggleCombo = (groupId: number) => {
+    setExpandedCombos(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const activeComboGroups = cartItems
+    .filter(i => i.comboGroup)
+    .map(i => i.comboGroup)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .map(g => ({ group: g!, name: comboGroups[g!]?.name || "Combo" }));
 
   // Redirigir si no hay sesión
   useEffect(() => {
@@ -343,9 +364,13 @@ export default function CartPage() {
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
-                        S/ {(item.product.price * item.quantity).toFixed(2)}
-                      </span>
+                      {item.isFree ? (
+                        <span className="font-bold text-green-600 text-xs min-w-[70px] text-right">Gratis</span>
+                      ) : (
+                        <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">
+                          S/ {(item.product.price * item.quantity).toFixed(2)}
+                        </span>
+                      )}
                       <button
                         onClick={() => deleteFromCart(item.product.id)}
                         className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer"
@@ -364,32 +389,62 @@ export default function CartPage() {
                       groups.get(item.comboGroup)!.push(item);
                     }
                   }
-                  return Array.from(groups.entries()).flatMap(([groupId, groupItems]) => [
-                    <div key={`ch-${groupId}`} className="flex items-center justify-between pl-1 mt-2">
-                      <span className="text-[10px] font-black uppercase text-brand-purple bg-brand-purple-light px-2 py-1 rounded-md">Combo</span>
-                      <button onClick={() => removeComboGroup(groupId)} className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer">Quitar combo</button>
-                    </div>,
-                    ...groupItems.map((item) => (
-                      <div key={`cg-${groupId}-${item.product.id}`} className="bg-white border border-purple-100/80 rounded-3xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
-                        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
-                          <ImagePlaceholder filename={`${item.product.imageKey}.jpg`} description={item.product.name} type="product" className="w-full h-full" />
-                        </div>
-                        <div className="flex-1 min-w-0 text-center sm:text-left">
-                          <h3 className="font-bold text-brand-purple-dark text-sm mt-1 truncate">{item.product.name}</h3>
-                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">{item.product.unit}</p>
-                        </div>
-                        <div className="flex items-center gap-6 shrink-0">
-                          <div className="flex items-center bg-purple-50/50 rounded-xl border border-purple-100/50 p-1">
-                            <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
-                            <span className="text-xs font-black px-3.5 text-brand-purple-dark">{item.quantity}</span>
-                            <button onClick={() => addItemToCombo(item.product, groupId)} className="p-1 hover:bg-purple-100 rounded-lg text-brand-purple transition-all cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
+                  return Array.from(groups.entries()).map(([groupId, groupItems]) => {
+                    const comboName = comboGroups[groupId]?.name || "Combo";
+                    const comboTotal = groupItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+                    const isExpanded = expandedCombos.has(groupId);
+                    return (
+                      <div key={`combo-${groupId}`} className="bg-white border border-purple-100/80 rounded-3xl shadow-sm overflow-hidden">
+                        <button
+                          onClick={() => toggleCombo(groupId)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-purple-50/30 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-brand-purple-light flex items-center justify-center shrink-0">
+                              <Zap className="w-4 h-4 text-brand-purple" />
+                            </div>
+                            <div className="min-w-0 text-left">
+                              <span className="font-black text-brand-purple-dark text-sm block truncate">{comboName}</span>
+                              <span className="text-[9px] text-gray-400 font-semibold">{groupItems.length} {groupItems.length === 1 ? "producto" : "productos"}</span>
+                            </div>
                           </div>
-                          <span className="font-black text-brand-purple-dark text-sm min-w-[70px] text-right">S/ {(item.product.price * item.quantity).toFixed(2)}</span>
-                          <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all border border-red-100/50 cursor-pointer" title="Quitar del combo"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-black text-brand-purple-dark text-sm">S/ {comboTotal.toFixed(2)}</span>
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-purple-100/50">
+                            <div className="px-4 py-3 space-y-2">
+                              {groupItems.map((item) => (
+                                <div key={`cg-${groupId}-${item.product.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-purple-50/30 transition-colors">
+                                  <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
+                                    <ImagePlaceholder filename={`${item.product.imageKey}.jpg`} description={item.product.name} type="product" className="w-full h-full" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-brand-purple-dark text-xs truncate">{item.product.name}</h4>
+                                    <p className="text-[9px] text-gray-400 font-medium truncate">{item.product.unit}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center bg-purple-50/50 rounded-lg border border-purple-100/50 p-0.5">
+                                      <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1 hover:bg-purple-100 rounded-md text-brand-purple transition-all cursor-pointer"><Minus className="w-3 h-3" /></button>
+                                      <span className="text-[10px] font-black px-2 text-brand-purple-dark">{item.quantity}</span>
+                                      <button onClick={() => addItemToCombo(item.product, groupId)} className="p-1 hover:bg-purple-100 rounded-md text-brand-purple transition-all cursor-pointer"><Plus className="w-3 h-3" /></button>
+                                    </div>
+                                    <span className="font-bold text-brand-purple-dark text-[10px] min-w-[50px] text-right">S/ {(item.product.price * item.quantity).toFixed(2)}</span>
+                                    <button onClick={() => removeItemFromCombo(item.product.id, groupId)} className="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-400 hover:text-red-600 transition-all cursor-pointer" title="Quitar del combo"><Trash2 className="w-3 h-3" /></button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="border-t border-purple-100/50 px-4 py-2 flex justify-end gap-3">
+                              <button onClick={() => removeComboGroup(groupId)} className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer transition-colors">Quitar combo</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )),
-                  ]);
+                    );
+                  });
                 })()}
               </div>
             </div>
@@ -503,7 +558,13 @@ export default function CartPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {upsellProducts.map((prod) => {
-                const activeComboGroup = cartItems.find((i) => i.comboGroup)?.comboGroup;
+                const handleAddToCombo = () => {
+                  if (activeComboGroups.length === 1) {
+                    addItemToCombo(prod as any, activeComboGroups[0].group);
+                  } else if (activeComboGroups.length > 1) {
+                    setComboSelectorProduct({ product: prod, activeGroups: activeComboGroups });
+                  }
+                };
                 return (
                   <div
                     key={prod.id}
@@ -526,9 +587,9 @@ export default function CartPage() {
                           S/ {prod.price.toFixed(2)}
                         </span>
                       </div>
-                      {activeComboGroup ? (
+                      {activeComboGroups.length > 0 ? (
                         <button
-                          onClick={() => addItemToCombo(prod as any, activeComboGroup)}
+                          onClick={handleAddToCombo}
                           className="mt-3 text-[9px] font-bold bg-purple-50 hover:bg-purple-100 text-brand-purple px-2 py-2 rounded-xl cursor-pointer self-start transition-colors"
                           title="Agregar al combo"
                         >
@@ -551,6 +612,36 @@ export default function CartPage() {
         )}
 
       </main>
+
+      {/* MODAL SELECCIÓN DE COMBO */}
+      {comboSelectorProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-purple-50 p-6 animate-scaleIn">
+            <h3 className="text-sm font-black text-brand-purple-dark mb-1">Agregar a combo</h3>
+            <p className="text-xs text-gray-400 font-semibold mb-4">¿A qué combo quieres agregar <span className="text-brand-purple-dark font-bold">{comboSelectorProduct.product.name}</span>?</p>
+            <div className="space-y-2">
+              {comboSelectorProduct.activeGroups.map(({ group, name }) => (
+                <button
+                  key={group}
+                  onClick={() => {
+                    addItemToCombo(comboSelectorProduct.product as any, group);
+                    setComboSelectorProduct(null);
+                  }}
+                  className="w-full text-left text-xs font-bold text-brand-purple-dark bg-purple-50 hover:bg-purple-100 border border-purple-100/80 px-4 py-3 rounded-xl transition-all cursor-pointer"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setComboSelectorProduct(null)}
+              className="w-full mt-3 text-[10px] font-bold text-gray-400 hover:text-gray-600 py-2 cursor-pointer transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL PASARELA DE PAGOS E HILO DE ENVÍO */}
       {showCheckout && (

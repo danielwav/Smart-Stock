@@ -96,7 +96,7 @@ function StoreContent() {
         addComboToCart(combo.id, res.items.map((i: any) => ({
           product: i.product as CartProduct,
           quantity: i.quantity,
-        })));
+        })), combo.name);
       } else {
         addToCart(combo as any);
       }
